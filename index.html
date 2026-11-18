@@ -1,935 +1,493 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Cost Threshold Monitor</title>
-    <style>
-      :root {
-        --bg: #0b1220;
-        --card: #131c2e;
-        --in: #0d1626;
-        --line: #223049;
-        --tx: #e6edf7;
-        --mu: #a3b2c9;
-        --or: #ff9900;
-        --ok: #22c55e;
-        --bad: #ef4444;
-        --off: #64748b;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        padding: 13px;
-        background: var(--bg);
-        color: var(--tx);
-        font:
-          16px/1.45 system-ui,
-          -apple-system,
-          "Segoe UI",
-          Roboto,
-          sans-serif;
-        font-variant-numeric: tabular-nums;
-      }
-      .wrap {
-        max-width: 1180px;
-        margin: auto;
-      }
-      header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-bottom: 16px;
-      }
-      h1 {
-        font-size: 22px;
-        margin: 0;
-        font-weight: 700;
-      }
-      h1 span {
-        color: var(--or);
-      }
-      .sub {
-        color: var(--mu);
-        font-size: 13px;
-      }
-      .hr {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-      }
-      .api {
-        font-size: 13px;
-        color: var(--mu);
-        display: flex;
-        align-items: center;
-        gap: 7px;
-      }
-      .dot {
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        background: var(--off);
-      }
-      .dot.ok {
-        background: var(--ok);
-      }
-      .dot.bad {
-        background: var(--bad);
-      }
-      .dot.warn {
-        background: #eab308;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: 290px 1fr;
-        gap: 16px;
-      }
-      @media (max-width: 780px) {
-        .grid {
-          grid-template-columns: 1fr;
-        }
-      }
-      .card {
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 18px;
-      }
-      h2 {
-        font-size: 15px;
-        margin: 0 0 12px;
-        font-weight: 600;
-        color: var(--mu);
-      }
-      label {
-        display: block;
-        font-size: 13px;
-        color: var(--mu);
-        margin: 10px 0 5px;
-      }
-      input[type="number"] {
-        width: 100%;
-        background: var(--in);
-        border: 1px solid var(--line);
-        color: var(--tx);
-        border-radius: 8px;
-        padding: 9px;
-        font-size: 16px;
-      }
-      input[type="range"] {
-        width: 100%;
-        accent-color: var(--or);
-        margin-top: 8px;
-      }
-      .seg {
-        display: flex;
-        background: var(--in);
-        border: 1px solid var(--line);
-        border-radius: 9px;
-        padding: 3px;
-      }
-      .seg button {
-        background: none;
-        border: 0;
-        color: var(--mu);
-        padding: 6px 16px;
-        border-radius: 7px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-      .seg button.on {
-        background: var(--or);
-        color: #111;
-      }
-      .row {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-      }
-      .ghost {
-        flex: 1;
-        background: none;
-        border: 1px solid var(--line);
-        color: var(--tx);
-        border-radius: 8px;
-        padding: 8px;
-        cursor: pointer;
-        font-size: 13px;
-      }
-      .ghost:hover {
-        border-color: var(--mu);
-      }
-      .run {
-        width: 100%;
-        margin-top: 14px;
-        background: var(--or);
-        color: #111;
-        border: 0;
-        border-radius: 9px;
-        padding: 12px;
-        font-weight: 700;
-        font-size: 15px;
-        cursor: pointer;
-      }
-      button:disabled,
-      input:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
-      :focus-visible {
-        outline: 2px solid var(--or);
-        outline-offset: 2px;
-      }
-      .note {
-        font-size: 12px;
-        color: var(--mu);
-        margin: 10px 0 0;
-      }
-      .warn {
-        font-size: 13px;
-        color: var(--mu);
-        margin: 12px 0 0;
-        display: none;
-      }
-      .err {
-        display: none;
-        background: #2a1417;
-        border: 1px solid var(--bad);
-        color: #fecaca;
-        border-radius: 8px;
-        padding: 10px 12px;
-        margin-bottom: 14px;
-        font-size: 14px;
-      }
-      .hero {
-        text-align: center;
-        padding: 14px 0 6px;
-        margin: auto 0;
-      }
-      .grid > section:nth-child(2) {
-        display: flex;
-        flex-direction: column;
-      }
-      .st {
-        font-size: 40px;
-        font-weight: 800;
-        letter-spacing: 0.01em;
-        line-height: 1.1;
-      }
-      .st.safe {
-        color: var(--ok);
-      }
-      .st.bad {
-        color: var(--bad);
-      }
-      .st.idle {
-        color: var(--off);
-      }
-      .amt {
-        font-size: 20px;
-        margin: 6px 0 30px;
-        color: var(--tx);
-      }
-      .bar {
-        position: relative;
-        height: 18px;
-        background: var(--in);
-        border-radius: 9px;
-        margin: 0 6px;
-      }
-      .fill {
-        height: 100%;
-        width: 0;
-        border-radius: 9px;
-        background: var(--ok);
-        transition: width 0.5s ease;
-      }
-      .fill.bad {
-        background: var(--bad);
-      }
-      .mark {
-        position: absolute;
-        top: -8px;
-        bottom: -8px;
-        width: 2px;
-        background: var(--tx);
-        left: 66.6%;
-      }
-      .mark i {
-        position: absolute;
-        top: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        font-style: normal;
-        font-size: 12px;
-        color: var(--mu);
-        margin-top: 3px;
-        white-space: nowrap;
-      }
-      .pct {
-        font-size: 13px;
-        color: var(--mu);
-        margin-top: 34px;
-      }
-      .chips {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        justify-content: center;
-        margin-top: 14px;
-      }
-      .chip {
-        font-size: 12px;
-        color: var(--mu);
-        border: 1px solid var(--line);
-        border-radius: 99px;
-        padding: 3px 10px;
-      }
-      .pipe {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        flex-wrap: nowrap;
-      }
-      .br {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        flex: 1;
-        min-width: 0;
-        padding-left: 24px;
-      }
-      .br::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 25%;
-        bottom: 25%;
-        border-left: 2px solid #6b7c99;
-      }
-      .br::after {
-        content: "";
-        position: absolute;
-        left: -16px;
-        top: 50%;
-        width: 16px;
-        border-top: 2px solid #6b7c99;
-      }
-      .ln {
-        position: relative;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .ln::before {
-        content: "";
-        position: absolute;
-        left: -24px;
-        top: 50%;
-        width: 24px;
-        border-top: 2px solid #6b7c99;
-      }
-      .ar {
-        color: var(--mu);
-      }
-      .node {
-        flex: 1;
-        background: var(--in);
-        border: 1px solid var(--line);
-        border-left: 4px solid var(--off);
-        border-radius: 8px;
-        padding: 8px 12px;
-        min-width: 110px;
-      }
-      .node b {
-        display: block;
-        font-size: 15px;
-      }
-      .node span {
-        font-size: 13px;
-        color: var(--mu);
-      }
-      .node.ok {
-        border-left-color: var(--ok);
-      }
-      .node.bad {
-        border-left-color: var(--bad);
-      }
-      .node.skip {
-        border-left-color: var(--mu);
-      }
-      .node.main {
-        flex: 0 0 130px;
-        border-left-color: var(--or);
-      }
-      .grid2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        margin-top: 16px;
-      }
-      .cap {
-        display: none;
-        font-size: 12px;
-        color: var(--mu);
-        margin: 4px 0 8px;
-      }
-      @media (max-width: 780px) {
-        .grid2 {
-          grid-template-columns: 1fr;
-        }
-        .pipe {
-          flex-wrap: wrap;
-        }
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 14px;
-      }
-      th {
-        text-align: left;
-        color: var(--mu);
-        font-weight: 500;
-        font-size: 13px;
-        padding: 6px 8px;
-        border-bottom: 1px solid var(--line);
-      }
-      td {
-        padding: 8px;
-        border-bottom: 1px solid var(--line);
-      }
-      td.s-safe {
-        color: var(--ok);
-      }
-      td.s-bad {
-        color: var(--bad);
-      }
-      .tw {
-        overflow-x: auto;
-      }
-      .top {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
-      }
-      .link {
-        background: none;
-        border: 0;
-        color: var(--mu);
-        cursor: pointer;
-        font-size: 12px;
-        text-decoration: underline;
-      }
-      .spark {
-        width: 100%;
-        height: 46px;
-        margin-top: 12px;
-        display: none;
-      }
-      .empty {
-        color: var(--mu);
-        font-size: 14px;
-        padding: 6px 0;
-      }
-      .stale {
-        opacity: 0.45;
-      }
-      tr.latest td {
-        background: #182540;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <header>
-        <div>
-          <h1><span>AWS</span> Cost Threshold Monitor</h1>
-          <div class="sub">Cloud spending and IoT alert system</div>
-        </div>
-        <div class="hr">
-          <div class="seg" role="group" aria-label="Mode">
-            <button id="mDEMO" class="on">DEMO</button
-            ><button id="mREAL">REAL</button>
-          </div>
-          <div class="api">
-            <span class="dot" id="dot"></span
-            ><span id="apiTxt">API not checked yet</span>
-          </div>
-        </div>
-      </header>
-
-      <div class="grid">
-        <section class="card">
-          <h2>Test run settings</h2>
-          <label for="budget">Budget limit ($)</label>
-          <input
-            type="number"
-            id="budget"
-            min="0"
-            max="10000"
-            step="0.05"
-            value="0.50"
-          />
-          <div id="demoBox">
-            <label for="demo">Demo cost ($)</label>
-            <input
-              type="number"
-              id="demo"
-              min="0"
-              max="10000"
-              step="0.05"
-              value="0.75"
-            />
-            <input
-              type="range"
-              id="slide"
-              min="0"
-              max="2"
-              step="0.05"
-              value="0.75"
-              aria-label="Demo cost slider"
-            />
-            <div class="row">
-              <button class="ghost" id="pSafe">Simulate safe</button>
-              <button class="ghost" id="pBad">Simulate exceed</button>
-            </div>
-          </div>
-          <div
-            class="warn"
-            id="realWarn"
-            title="Each uncached Cost Explorer request costs about $0.01."
-          >
-            <b style="color: var(--or)">REAL mode</b> uses AWS Cost Explorer for
-            the latest completed day. Billing data may be delayed or estimated.
-          </div>
-          <button class="run" id="run">Run check</button>
-          <p class="note">
-            These settings apply to this check only. They are not saved to
-            Lambda.
-          </p>
-        </section>
-
-        <section class="card" aria-live="polite">
-          <div class="err" id="err"></div>
-          <div class="hero">
-            <div class="st idle" id="st">No check yet</div>
-            <div class="amt" id="amt">
-              Run a check to see spending against your budget.
-            </div>
-            <div class="bar">
-              <div class="fill" id="fill"></div>
-              <div class="mark" id="mark"><i>Budget</i></div>
-            </div>
-            <div class="pct" id="pct">&nbsp;</div>
-            <div class="chips" id="chips"></div>
-            <div class="note" id="stl" style="display: none; margin-top: 12px">
-              Previous result. The latest check failed.
-            </div>
-          </div>
-        </section>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>CloudScope | Cost Intelligence</title>
+  <style>
+    :root {
+      --canvas: #f5f6fa;
+      --paper: #ffffff;
+      --ink: #1d2540;
+      --muted: #72809a;
+      --line: #e6eaf2;
+      --primary: #6554d8;
+      --primary-dark: #4d3bba;
+      --lilac: #f0edff;
+      --teal: #138e81;
+      --teal-light: #e7f7f3;
+      --rose: #d84b68;
+      --rose-light: #fff0f3;
+      --amber: #a86b24;
+      --amber-light: #fff6e8;
+      --shadow: 0 10px 35px rgba(30, 40, 80, .045);
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font: 15px/1.5 "Segoe UI", Arial, sans-serif; font-variant-numeric: tabular-nums; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled, input:disabled { cursor: not-allowed; opacity: .62; }
+    button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #9b8bff; outline-offset: 3px; }
+    a { color: inherit; text-decoration: none; }
+    .icon { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.85; stroke-linecap: round; stroke-linejoin: round; }
+    .app { display: flex; min-height: 100vh; }
+    .sidebar { background: #fff; width: 242px; border-right: 1px solid var(--line); flex: none; padding: 33px 20px 22px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+    .brand { display: flex; align-items: center; gap: 12px; margin: 0 0 48px 8px; }
+    .brandmark { width: 44px; height: 44px; background: #6654d8; border-radius: 14px; display: grid; place-items: center; color: white; box-shadow: 0 8px 16px #6654d830; }
+    .brandmark svg { width: 26px; height: 26px; }
+    .brand strong { display: block; font-size: 21px; line-height: 1.05; letter-spacing: -.7px; }
+    .brand small { display: block; color: var(--muted); font-size: 10px; margin-top: 5px; letter-spacing: 1px; font-weight: 800; }
+    .aside-label { font-size: 10px; text-transform: uppercase; font-weight: 800; letter-spacing: 2px; color: #a0a9bd; margin: 0 0 12px 17px; }
+    .menu { display: grid; gap: 6px; }
+    .menu a { display: flex; align-items: center; gap: 12px; color: #67738e; padding: 13px 15px; border-radius: 12px; font-weight: 650; font-size: 13px; }
+    .menu a.active, .menu a:hover { background: var(--lilac); color: var(--primary-dark); }
+    .menu a.active { box-shadow: inset 3px 0 0 var(--primary); }
+    .side-bottom { margin-top: auto; }
+    .side-tip { padding: 18px; background: #f5f4ff; border-radius: 16px; }
+    .side-tip .sparkle { background: #fff; color: var(--primary); width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; margin-bottom: 10px; }
+    .side-tip strong { display: block; font-size: 13px; }
+    .side-tip p { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 6px 0 0; }
+    .side-footer { font-size: 11px; color: #9aa5ba; padding: 22px 10px 0; }
+    .main { padding: 34px 38px 48px; width: 100%; min-width: 0; max-width: 1740px; margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 30px; }
+    .eyebrow { color: #9aa3ba; font-size: 11px; letter-spacing: 2.2px; text-transform: uppercase; font-weight: 800; }
+    .topbar h1 { font-size: 29px; line-height: 1.2; letter-spacing: -.8px; margin: 6px 0 0; }
+    .top-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .date-label { color: #79849b; font-size: 12px; }
+    .connection { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #65718c; background: white; border: 1px solid var(--line); border-radius: 100px; padding: 9px 14px; white-space: nowrap; }
+    .connection::before { content: ""; width: 8px; height: 8px; background: #a6b1c3; border-radius: 100%; }
+    .connection.ok::before { background: var(--teal); box-shadow: 0 0 0 4px #d9f2e9; }
+    .connection.bad::before { background: var(--rose); }
+    .connection.warn::before { background: #d99e31; }
+    .banner { border-radius: 23px; background: linear-gradient(115deg, #5551bf 0%, #7a6add 56%, #8c82e7 100%); padding: 32px 38px; display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden; color: white; margin-bottom: 20px; min-height: 161px; }
+    .banner::before, .banner::after { content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%; border: 1px solid #ffffff45; right: 68px; top: -134px; }
+    .banner::after { width: 310px; height: 310px; right: -60px; top: -170px; border: 35px solid #ffffff17; }
+    .banner-copy { position: relative; z-index: 1; max-width: 640px; }
+    .banner .micro { display: inline-flex; border: 1px solid #ffffff4c; background: #ffffff20; padding: 3px 10px; border-radius: 100px; font-size: 11px; letter-spacing: 1.1px; font-weight: 700; text-transform: uppercase; }
+    .banner h2 { font-size: clamp(22px, 2.6vw, 32px); letter-spacing: -.7px; margin: 10px 0 6px; line-height: 1.2; }
+    .banner p { color: #f4f1ff; font-size: 13px; margin: 0; }
+    .banner-graphic { position: relative; z-index: 1; margin-right: 45px; min-width: 140px; height: 93px; display: flex; align-items: end; justify-content: center; gap: 7px; transform: rotate(-8deg); }
+    .banner-graphic i { display: block; width: 25px; border-radius: 9px 9px 3px 3px; background: #ffffff; opacity: .78; }
+    .banner-graphic i:nth-child(1){ height: 28px; opacity:.28; } .banner-graphic i:nth-child(2){ height: 51px; opacity:.5; } .banner-graphic i:nth-child(3){ height: 41px; opacity:.6; } .banner-graphic i:nth-child(4){ height: 80px; }
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 15px; margin-bottom: 20px; }
+    .metric { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 17px 20px; min-height: 111px; box-shadow: var(--shadow); }
+    .metric-title { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 12px; font-weight: 650; gap: 10px; }
+    .metric-title .mi { color: var(--primary); background: #f2efff; display: grid; place-items: center; border-radius: 9px; height: 31px; width: 31px; }
+    .metric-title .mi.teal { background: var(--teal-light); color: var(--teal); } .metric-title .mi.orange { background: var(--amber-light); color: var(--amber); }
+    .metric-number { font-size: 26px; font-weight: 800; letter-spacing: -.8px; margin: 8px 0 0; line-height: 1; white-space: nowrap; }
+    .metric-number.small { font-size: 19px; padding-top: 4px; }
+    .metric-sub { color: #a0a9b8; font-size: 11px; margin-top: 8px; }
+    .workspace { display: grid; grid-template-columns: minmax(0,1.26fr) minmax(320px,.74fr); gap: 20px; margin-bottom: 20px; align-items: stretch; }
+    .panel { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; min-width: 0; }
+    .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+    .panel-heading h2 { font-size: 17px; font-weight: 800; letter-spacing: -.3px; line-height: 1.2; margin: 0; }
+    .panel-heading p { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+    .tiny-label { display: inline-block; color: #6f64bd; background: #f1efff; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 8px; white-space: nowrap; }
+    .result-content { display: flex; align-items: center; gap: clamp(18px, 3vw, 45px); min-height: 205px; }
+    .donut { position: relative; width: 216px; height: 216px; flex: none; }
+    .donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .donut .track { fill: none; stroke: #eff1fa; stroke-width: 15; }
+    .donut .progress { fill: none; stroke: #a9a1ec; stroke-width: 15; stroke-linecap: round; transition: stroke-dashoffset .5s ease, stroke .3s ease; }
+    .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .donut-center b { font-size: 36px; font-weight: 850; letter-spacing: -1.4px; }
+    .donut-center small { font-size: 12px; color: var(--muted); margin-top: -2px; }
+    .result-description { min-width: 0; }
+    .status-label { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 100px; font-size: 11px; font-weight: 800; letter-spacing: .4px; background: #f2f1fc; color: #695dc3; }
+    .status-label.ok { background: var(--teal-light); color: var(--teal); }
+    .status-label.bad { background: var(--rose-light); color: var(--rose); }
+    .status-label.warn { background: var(--amber-light); color: var(--amber); }
+    .result-description h3 { margin: 13px 0 3px; font-size: 31px; font-weight: 800; letter-spacing: -.8px; line-height: 1.2; overflow-wrap: anywhere; }
+    .result-description p { margin: 0; font-size: 13px; color: var(--muted); }
+    .result-description .fine { margin-top: 13px; line-height: 1.7; font-size: 12px; color: #929cb1; }
+    .meta { margin-top: 19px; border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-wrap: wrap; gap: 9px; }
+    .meta span { background: #f6f7fb; color: #6d7890; font-size: 11px; padding: 6px 10px; border-radius: 8px; }
+    .alert { display: none; margin: 0 0 18px; border-radius: 12px; background: var(--rose-light); border: 1px solid #f7cbd4; padding: 12px 15px; color: #9d3250; font-size: 13px; }
+    .alert.visible { display: block; }
+    .stale-note { display: none; border-radius: 10px; margin-top: 10px; background: var(--amber-light); color: #8b631d; font-size: 12px; padding: 10px 12px; }
+    .stale-note.visible { display: block; }
+    .stale-visual { opacity: .5; }
+    .field-group { display: grid; gap: 15px; }
+    .field label { display: block; color: #47536d; font-size: 12px; font-weight: 800; margin-bottom: 7px; }
+    .input-shell { background: #f8f9fc; border: 1px solid #e4e8f0; border-radius: 11px; display: flex; align-items: center; overflow: hidden; }
+    .input-shell .currency { padding-left: 15px; color: #697593; font-weight: 700; }
+    .input-shell input { min-width: 0; width: 100%; background: transparent; color: var(--ink); border: 0; outline: 0; padding: 11px 14px 11px 8px; font-weight: 800; font-size: 17px; }
+    .input-shell:focus-within { border-color: #8977ed; box-shadow: 0 0 0 3px #ece9ff; }
+    .mode-switch { background: #f2f3f8; border-radius: 12px; padding: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+    .mode-switch button { background: transparent; border: 0; padding: 10px 12px; color: #7c88a0; font-weight: 800; border-radius: 9px; font-size: 12px; }
+    .mode-switch button.selected { background: var(--paper); color: var(--primary-dark); box-shadow: 0 3px 10px rgba(19,29,62,.06); }
+    .field-helper { color: var(--muted); font-size: 11px; margin-top: 5px; }
+    input[type="range"] { display: block; width: 100%; margin: 14px 0 10px; accent-color: var(--primary); }
+    .presets { display: flex; gap: 9px; }
+    .preset { flex: 1; border: 1px solid var(--line); background: white; color: #646f8e; padding: 8px 4px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+    .preset:hover { border-color: #9789e9; background: #faf9ff; }
+    .real-detail { display: none; background: #f4f3ff; color: #6862a0; font-size: 12px; line-height: 1.6; border-radius: 11px; padding: 14px; }
+    .action { margin-top: 18px; border: 0; width: 100%; border-radius: 12px; background: var(--primary); color: white; padding: 13px 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 9px; box-shadow: 0 8px 15px #6554d826; }
+    .action:hover { background: var(--primary-dark); }
+    .disclaimer { color: #929bb0; font-size: 11px; text-align: center; line-height: 1.5; margin: 12px 0 0; }
+    .lower { display: grid; grid-template-columns: minmax(320px,.76fr) minmax(0,1.24fr); gap: 20px; }
+    .service-list { display: grid; gap: 4px; }
+    .service { display: flex; align-items: center; gap: 13px; border-bottom: 1px solid #eff1f7; padding: 13px 0; }
+    .service:last-child { border-bottom: 0; }
+    .service-icon { width: 38px; height: 38px; background: #f3f1ff; color: var(--primary); display: grid; place-items: center; border-radius: 12px; flex: none; }
+    .service-icon.teal { color: var(--teal); background: var(--teal-light); }
+    .service-icon.amber { color: var(--amber); background: var(--amber-light); }
+    .service-copy { flex: 1; min-width: 0; }
+    .service-copy strong { font-size: 13px; display: block; }
+    .service-copy small { color: #98a3b6; font-size: 11px; }
+    .service-state { color: #78839b; background: #f6f7fb; border-radius: 8px; padding: 5px 9px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .service-state.ok { background: var(--teal-light); color: var(--teal); } .service-state.bad { background: var(--rose-light); color: var(--rose); } .service-state.skip { background: #f2f3f7; color: #8994a9; }
+    .service-footnote { border-top: 1px solid var(--line); padding-top: 14px; margin: 8px 0 0; color: #909bb2; font-size: 11px; line-height: 1.6; }
+    .panel-actions { display: flex; gap: 12px; align-items: center; }
+    .clear-btn { background: none; border: 0; color: var(--primary); font-size: 12px; font-weight: 800; }
+    .empty { padding: 35px 10px; color: #8a96ac; text-align: center; font-size: 13px; }
+    .empty svg { display: block; margin: 0 auto 12px; width: 42px; height: 42px; color: #a9a2de; }
+    .chart-wrap { background: #fafbfe; border: 1px solid #f0f2f8; border-radius: 13px; margin: 8px 0 12px; padding: 11px; display: none; }
+    .chart-wrap svg { display: block; width: 100%; height: 88px; overflow: visible; }
+    .chart-caption { display: flex; gap: 7px; align-items: center; font-size: 10px; color: #8c96ac; margin-top: 5px; }
+    .chart-caption::before { content:""; width:9px; height:9px; border-radius: 50%; background: var(--primary); }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th { text-align: left; font-weight: 750; color: #8b96aa; padding: 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    td { color: #48546e; padding: 12px 10px; border-bottom: 1px solid #f0f2f8; white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .pill { font-weight: 800; font-size: 10px; border-radius: 100px; padding: 4px 9px; white-space: nowrap; }
+    .pill.ok { color: var(--teal); background: var(--teal-light); } .pill.bad { color: var(--rose); background: var(--rose-light); }
+    .bottom-note { text-align: right; color: #a1abbc; font-size: 11px; margin-top: 20px; }
+    @media (max-width: 1200px) { .sidebar { width: 215px; padding: 26px 14px; } .main { padding: 26px 24px 38px; } .workspace { grid-template-columns: minmax(0,1fr) minmax(310px,.82fr); } .donut { width: 177px; height: 177px; } .result-description h3 { font-size: 26px; } }
+    @media (max-width: 980px) { .sidebar { width: 74px; padding: 20px 10px; align-items: center; } .brand { margin: 0 0 30px; } .brand-text, .aside-label, .menu span, .side-bottom { display: none; } .menu a { padding: 12px; } .main { padding: 24px; } .summary { grid-template-columns: repeat(2,minmax(0,1fr)); } .workspace, .lower { grid-template-columns: 1fr; } .banner { min-height: 145px; } }
+    @media (max-width: 600px) { .app { display: block; } .sidebar { width: 100%; position: static; height: auto; flex-direction: row; justify-content: space-between; padding: 11px 14px; border-bottom: 1px solid var(--line); } .brand { margin: 0; } .brandmark { height: 39px; width: 39px; } .menu { display: flex; } .menu a { padding: 8px; } .menu .icon { width: 18px; height: 18px; } .main { padding: 20px 13px; } .topbar { align-items: flex-start; flex-direction: column; gap: 14px; margin-bottom: 18px; } .topbar h1 { font-size: 24px; } .date-label { display: none; } .banner { padding: 22px 20px; border-radius: 18px; min-height: 134px; } .banner-graphic { display: none; } .summary { gap: 9px; } .metric { padding: 15px; min-height: 103px; } .metric-number { font-size: 21px; } .metric-number.small { font-size: 16px; } .panel { padding: 19px 16px; border-radius: 17px; } .result-content { flex-direction: column; text-align: center; gap: 9px; } .donut { width: 185px; height: 185px; } .result-description h3 { font-size: 26px; } .panel-heading { margin-bottom: 14px; } .meta { justify-content: center; } .workspace, .lower { gap: 13px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" aria-label="Main navigation">
+    <div class="brand">
+      <div class="brandmark" aria-hidden="true">
+        <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M4 18 11 11l5 4 8-9"/><path d="M19 6h5v5"/><path d="M4 24h20"/></svg>
       </div>
+      <div class="brand-text"><strong>CloudScope</strong><small>COST INTELLIGENCE</small></div>
+    </div>
+    <div class="aside-label">Workspace</div>
+    <nav class="menu">
+      <a href="#overview" class="active" aria-label="Overview"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Overview</span></a>
+      <a href="#new-check" aria-label="New check"><svg class="icon" viewBox="0 0 24 24"><path d="M4 12h16M12 4v16"/></svg><span>New check</span></a>
+      <a href="#activity" aria-label="Check history"><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg><span>Check history</span></a>
+      <a href="#services" aria-label="Services"><svg class="icon" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/><circle cx="8" cy="7" r="2" fill="white"/><circle cx="16" cy="12" r="2" fill="white"/></svg><span>Services</span></a>
+    </nav>
+    <div class="side-bottom">
+      <div class="side-tip"><div class="sparkle">✦</div><strong>How it works</strong><p>Send a budget check. AWS Lambda evaluates the amount and reports cloud publishing outcomes.</p></div>
+      <div class="side-footer">CloudScope · Academic cloud demo</div>
+    </div>
+  </aside>
 
-      <div class="grid2">
-        <section class="card">
-          <h2>Execution pipeline</h2>
-          <div class="pipe">
-            <div class="node main" id="nL">
-              <b>Lambda</b><span id="tL">Waiting</span>
-            </div>
-            <div class="br">
-              <div class="ln">
-                <div class="node" id="nI">
-                  <b>IoT Core</b><span id="tI">Waiting</span>
-                </div>
-                <span class="ar">&rarr;</span>
-                <div class="node"><b>ESP32</b><span>Not connected</span></div>
-              </div>
-              <div class="ln">
-                <div class="node" id="nS">
-                  <b>SNS</b><span id="tS">Waiting</span>
-                </div>
-                <span class="ar">&rarr;</span>
-                <div class="node" id="nE">
-                  <b>Email</b><span id="tE">Waiting</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p class="note">
-            Published/sent means AWS accepted the message; downstream delivery
-            is not confirmed.
-          </p>
-        </section>
-
-        <section class="card">
-          <div class="top">
-            <h2 style="margin: 0">Recent checks</h2>
-            <button class="link" id="clr">Clear</button>
-          </div>
-          <svg
-            class="spark"
-            id="spark"
-            viewBox="0 0 200 40"
-            preserveAspectRatio="none"
-            aria-label="Usage trend"
-          ></svg>
-          <div class="cap" id="cap">
-            Usage per check, as % of budget. The dashed line is 100%.
-          </div>
-          <div class="tw">
-            <table id="tbl">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Mode</th>
-                  <th>Cost</th>
-                  <th>Budget</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="tb"></tbody>
-            </table>
-          </div>
-          <div class="empty" id="empty">No checks yet.</div>
-        </section>
-      </div>
+  <main class="main" id="overview">
+    <div class="topbar">
+      <div><span class="eyebrow">CLOUD OPERATIONS / DASHBOARD</span><h1>Cost intelligence</h1></div>
+      <div class="top-tools"><time class="date-label" id="today"></time><div id="connection" class="connection" role="status" aria-live="polite">Connection not checked</div></div>
     </div>
 
-    <script>
-      const API_URL =
-        "https://8r5ia9gnnl.execute-api.us-east-1.amazonaws.com/check";
-      const KEY = "costMonitorHistory";
-      const $ = (id) => document.getElementById(id);
-      let mode = "DEMO",
-        busy = false,
-        shown = false,
-        lastMode = "",
-        latestAttemptFailed = false;
-      const money = (n) => "$" + Number(n).toFixed(2);
-      const esc = (s) =>
-        String(s).replace(
-          /[&<>"]/g,
-          (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
-        );
-      const when = (iso) =>
-        new Date(iso).toLocaleString([], {
-          day: "2-digit",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+    <section class="banner" aria-label="Dashboard introduction">
+      <div class="banner-copy"><span class="micro">AWS monitoring workspace</span><h2>Stay a step ahead of cloud spending.</h2><p>One clear view of your cost checks, spending limits and AWS delivery activity.</p></div>
+      <div class="banner-graphic" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    </section>
 
-      function setMode(m) {
-        mode = m;
-        $("mDEMO").classList.toggle("on", m === "DEMO");
-        $("mREAL").classList.toggle("on", m === "REAL");
-        $("demoBox").style.display = m === "DEMO" ? "block" : "none";
-        $("realWarn").style.display = m === "REAL" ? "block" : "none";
-        updateStale();
-      }
-      $("mDEMO").onclick = () => setMode("DEMO");
-      $("mREAL").onclick = () => setMode("REAL");
+    <section class="summary" aria-label="Latest check summary">
+      <div class="metric"><div class="metric-title">Latest cost <span class="mi"><svg class="icon" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7 15l4-5 4 3 5-7"/></svg></span></div><div class="metric-number" id="kpiCost">—</div><div class="metric-sub">Last successful check</div></div>
+      <div class="metric"><div class="metric-title">Budget threshold <span class="mi teal"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M15 9c-1-2-6-2-6 1 0 3 6 1 6 4 0 3-5 4-6 1"/></svg></span></div><div class="metric-number" id="kpiBudget">$0.50</div><div class="metric-sub">Current check setting</div></div>
+      <div class="metric"><div class="metric-title">Budget used <span class="mi orange"><svg class="icon" viewBox="0 0 24 24"><path d="m12 3 9 17H3z"/><path d="M12 9v5M12 17h.01"/></svg></span></div><div class="metric-number" id="kpiUsage">—</div><div class="metric-sub">Percentage of budget</div></div>
+      <div class="metric"><div class="metric-title">Data source <span class="mi"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18M5 9h14M5 15h14"/><circle cx="12" cy="12" r="9"/></svg></span></div><div class="metric-number small" id="kpiSource">Not checked</div><div class="metric-sub" id="sourceCaption">Choose a mode below</div></div>
+    </section>
 
-      const sMax = () =>
-        Math.min(
-          10000,
-          Math.max(2, Math.ceil((parseFloat($("budget").value) || 0.5) * 2)),
-        );
-      function setDemo(v) {
-        v = Math.min(10000, Math.round(v * 100) / 100);
-        $("demo").value = v;
-        $("slide").max = sMax();
-        $("slide").value = v;
-      }
-      $("slide").oninput = (e) => {
-        $("demo").value = e.target.value;
-      };
-      $("demo").oninput = (e) => {
-        $("slide").value = e.target.value;
-      };
-      $("budget").oninput = () => {
-        $("slide").max = sMax();
-        $("pBad").disabled = (parseFloat($("budget").value) || 0) >= 10000;
-      };
-      $("pSafe").onclick = () =>
-        setDemo((parseFloat($("budget").value) || 0) * 0.6);
-      $("pBad").onclick = () =>
-        setDemo((parseFloat($("budget").value) || 0.5) * 1.5);
+    <div class="workspace">
+      <section class="panel" id="assessment" aria-live="polite" aria-label="Check result">
+        <div class="panel-heading"><div><h2>Budget assessment</h2><p>A live result from your AWS check</p></div><span class="tiny-label">COST HEALTH</span></div>
+        <div class="alert" id="error" role="alert"></div>
+        <div id="resultVisual">
+          <div class="result-content">
+            <div class="donut" aria-label="Budget utilization indicator">
+              <svg viewBox="0 0 216 216" aria-hidden="true"><circle class="track" cx="108" cy="108" r="82"/><circle id="ring" class="progress" cx="108" cy="108" r="82"/></svg>
+              <div class="donut-center"><b id="ringPct">—</b><small>budget utilized</small></div>
+            </div>
+            <div class="result-description">
+              <span id="resultBadge" class="status-label">AWAITING CHECK</span>
+              <h3 id="resultTitle">No assessment yet</h3>
+              <p id="resultSubtitle">Run a budget check to view your latest result.</p>
+              <div class="fine" id="resultNote">Results are calculated in AWS Lambda, not estimated by this interface.</div>
+            </div>
+          </div>
+          <div class="meta" id="metadata"><span>Select DEMO or REAL to begin</span></div>
+        </div>
+        <div class="stale-note" id="staleNote" role="status"></div>
+      </section>
 
-      function setApi(state, txt) {
-        $("dot").className = "dot " + state;
-        $("apiTxt").textContent = txt;
-      }
-      function showErr(msg) {
-        const e = $("err");
-        e.textContent = msg;
-        e.style.display = "block";
-      }
-      function hideErr() {
-        $("err").style.display = "none";
-      }
-      function updateStale() {
-        if (!shown) return stale(false);
-        if (latestAttemptFailed)
-          return stale(true, "Previous result. The latest check failed.");
-        if (mode !== lastMode)
-          return stale(
-            true,
-            "This result is from " +
-              lastMode +
-              " mode. Run a check to update it.",
-          );
-        stale(false);
-      }
-      function stale(on, msg) {
-        $("stl").textContent =
-          msg || "Previous result. The latest check failed.";
-        document
-          .querySelectorAll(
-            ".hero .st,.hero .amt,.hero .bar,.hero .pct,.hero .chips,.pipe",
-          )
-          .forEach((e) => e.classList.toggle("stale", on));
-        $("stl").style.display = on ? "block" : "none";
-      }
+      <section class="panel" id="new-check">
+        <div class="panel-heading"><div><h2>Run a new check</h2><p>Configure the values to evaluate</p></div></div>
+        <form id="checkForm" novalidate>
+          <div class="field-group">
+            <div class="field"><label>Cost source</label><div class="mode-switch" role="group" aria-label="Monitoring mode"><button id="demoMode" type="button" class="selected" aria-pressed="true">Simulation</button><button id="realMode" type="button" aria-pressed="false">AWS Cost Explorer</button></div></div>
+            <div class="field"><label for="budgetInput">Budget limit (USD)</label><div class="input-shell"><span class="currency">$</span><input id="budgetInput" type="number" min="0" max="10000" step="0.05" value="0.50" inputmode="decimal" required/></div></div>
+            <div class="field" id="demoFields"><label for="demoInput">Simulated cost (USD)</label><div class="input-shell"><span class="currency">$</span><input id="demoInput" type="number" min="0" max="10000" step="0.05" value="0.75" inputmode="decimal" required/></div><input id="demoSlider" type="range" min="0" max="2" step="0.05" value="0.75" aria-label="Adjust simulated cost"/><div class="presets"><button class="preset" id="underPreset" type="button">Below limit</button><button class="preset" id="overPreset" type="button">Above limit</button></div></div>
+            <div class="real-detail" id="realDetail">REAL mode reads AWS Cost Explorer for the latest completed day. Billing data can be delayed or estimated. Cost Explorer API requests may incur charges.</div>
+          </div>
+          <button class="action" id="submitCheck" type="submit"><svg class="icon" viewBox="0 0 24 24"><path d="m3 12 7 7L21 5"/></svg><span id="submitText">Evaluate budget</span></button>
+          <p class="disclaimer">Values apply to this check only and are not saved to Lambda.</p>
+        </form>
+      </section>
+    </div>
 
-      function node(id, tid, cls, text) {
-        $(id).className = "node " + cls;
-        const sym =
-          { ok: "\u2713 ", bad: "\u2715 ", skip: "\u2013 " }[
-            cls.split(" ")[0]
-          ] || "";
-        $(tid).textContent = sym + text;
-      }
+    <div class="lower">
+      <section class="panel" id="services">
+        <div class="panel-heading"><div><h2>Cloud service activity</h2><p>Service status from the most recent check</p></div></div>
+        <div class="service-list">
+          <div class="service"><div class="service-icon"><svg class="icon" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg></div><div class="service-copy"><strong>AWS Lambda</strong><small>Cost evaluation</small></div><span class="service-state" id="lambdaState">Waiting</span></div>
+          <div class="service"><div class="service-icon teal"><svg class="icon" viewBox="0 0 24 24"><path d="M5 8a10 10 0 0 1 0 8M9 10a5 5 0 0 1 0 4M19 8a10 10 0 0 0 0 8M15 10a5 5 0 0 0 0 4"/><circle cx="12" cy="12" r="1.5"/></svg></div><div class="service-copy"><strong>AWS IoT Core</strong><small>MQTT status publication</small></div><span class="service-state" id="iotState">Waiting</span></div>
+          <div class="service"><div class="service-icon amber"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0v4l-2 3h16l-2-3V8M10 19a2 2 0 0 0 4 0"/></svg></div><div class="service-copy"><strong>Amazon SNS</strong><small>Threshold alert publication</small></div><span class="service-state" id="snsState">Waiting</span></div>
+          <div class="service"><div class="service-icon"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 7 9-7"/></svg></div><div class="service-copy"><strong>Email notification</strong><small>Inbox delivery verification</small></div><span class="service-state" id="emailState">Waiting</span></div>
+        </div>
+        <p class="service-footnote">“Published” and “Alert accepted” confirm AWS accepted a request. Subscriber and inbox delivery require separate verification. No physical IoT device is connected.</p>
+      </section>
 
-      function render(d) {
-        const over = d.status === "LIMIT_EXCEEDED";
-        const pct =
-          d.budget > 0 ? (d.cost / d.budget) * 100 : d.cost > 0 ? 999 : 0;
-        const scale = Math.max(150, Math.min(pct * 1.1, 300));
-        $("st").textContent = over ? "Limit exceeded" : "Safe";
-        $("st").className = "st " + (over ? "bad" : "safe");
-        $("amt").textContent = money(d.cost) + " of " + money(d.budget);
-        const f = $("fill");
-        f.className = "fill" + (over ? " bad" : "");
-        f.style.width = (Math.min(pct, scale) / scale) * 100 + "%";
-        $("mark").style.left = (100 / scale) * 100 + "%";
-        $("pct").textContent =
-          d.budget > 0
-            ? Math.round(pct) + "% of budget used"
-            : d.cost > 0
-              ? "Any spending exceeds a $0.00 budget"
-              : "No spending against a $0.00 budget";
-        const chips = [d.mode + " mode", "Checked " + when(d.checked_at)];
-        if (d.mode === "REAL")
-          chips.push(
-            "Cost for " +
-              new Date(d.date + "T00:00:00Z").toLocaleDateString([], {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                timeZone: "UTC",
-              }),
-            d.estimated ? "AWS data is estimated" : "AWS data is final",
-          );
-        else chips.push("Simulated spending");
-        $("chips").innerHTML = chips
-          .map((c) => '<span class="chip">' + esc(c) + "</span>")
-          .join("");
+      <section class="panel" id="activity">
+        <div class="panel-heading"><div><h2>Assessment history</h2><p>Your last five successful checks, stored only in this browser</p></div><div class="panel-actions"><button class="clear-btn" type="button" id="clearHistory" hidden>Clear history</button></div></div>
+        <div class="chart-wrap" id="chartWrap"><svg id="historyChart" viewBox="0 0 420 88" preserveAspectRatio="none" role="img" aria-label="Usage percentage trend over recent checks"></svg><div class="chart-caption">Cost as percentage of the budget · dotted line is 100%</div></div>
+        <div class="table-wrap"><table id="historyTable" hidden><thead><tr><th>Checked</th><th>Source</th><th>Cost</th><th>Budget</th><th>Outcome</th></tr></thead><tbody id="historyRows"></tbody></table></div>
+        <div class="empty" id="emptyHistory"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="10" width="34" height="30" rx="5"/><path d="M14 28h7l5-8 6 5"/><path d="M14 17h8"/></svg>No saved checks yet. Your results will appear here.</div>
+      </section>
+    </div>
+    <footer class="bottom-note">CloudScope • Cost Threshold Monitor • Software-only demonstration</footer>
+  </main>
+</div>
 
-        const a = d.actions || {};
-        node("nL", "tL", "ok main", "Executed");
-        node(
-          "nI",
-          "tI",
-          a.iot === "published" ? "ok" : "bad",
-          a.iot === "published"
-            ? "Published"
-            : a.iot === "failed"
-              ? "Failed"
-              : a.iot || "Unknown",
-        );
-        node(
-          "nS",
-          "tS",
-          a.sns === "sent" ? "ok" : a.sns === "skipped" ? "skip" : "bad",
-          a.sns === "sent"
-            ? "Alert sent"
-            : a.sns === "skipped"
-              ? "Not needed"
-              : a.sns === "failed"
-                ? "Failed"
-                : a.sns || "Unknown",
-        );
-        node(
-          "nE",
-          "tE",
-          a.sns === "failed" ? "bad" : a.sns === "sent" ? "" : "skip",
-          a.sns === "sent" ? "Delivery not tracked" : "Not sent",
-        );
-      }
+<script>
+  "use strict";
+  // This points to the NEW AWS account's API Gateway, not the original project's endpoint.
+  const API_URL = "https://8r5ia9gnnl.execute-api.us-east-1.amazonaws.com/check";
+  const HISTORY_KEY = "costMonitorHistory";
+  const $ = (id) => document.getElementById(id);
+  const formatMoney = (n) => "$" + Number(n).toFixed(2);
+  const formatTime = (iso) => {
+    const date = new Date(iso);
+    return Number.isNaN(date.getTime()) ? "Unknown" : date.toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  };
+  const RADIUS = 82;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  $("ring").style.strokeDasharray = String(CIRCUMFERENCE);
+  $("ring").style.strokeDashoffset = String(CIRCUMFERENCE);
+  $("today").textContent = new Date().toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
-      function load() {
-        try {
-          return JSON.parse(localStorage.getItem(KEY)) || [];
-        } catch (e) {
-          return [];
-        }
-      }
-      function save(d) {
-        const h = load();
-        h.unshift({
-          t: d.checked_at,
-          m: d.mode,
-          c: d.cost,
-          b: d.budget,
-          s: d.status,
-        });
-        try {
-          localStorage.setItem(KEY, JSON.stringify(h.slice(0, 5)));
-        } catch (e) {}
-        renderHistory();
-      }
-      function renderHistory() {
-        const h = load();
-        $("empty").style.display = h.length ? "none" : "block";
-        $("clr").style.display = h.length ? "inline" : "none";
-        $("tbl").style.display = h.length ? "table" : "none";
-        $("tb").innerHTML = h
-          .map(
-            (r, i) =>
-              "<tr" +
-              (i === 0 ? ' class="latest"' : "") +
-              "><td>" +
-              esc(when(r.t)) +
-              "</td><td>" +
-              esc(r.m) +
-              "</td><td>" +
-              money(r.c) +
-              "</td><td>" +
-              money(r.b) +
-              '</td><td class="' +
-              (r.s === "SAFE" ? "s-safe" : "s-bad") +
-              '">' +
-              (r.s === "SAFE" ? "Safe" : "Limit exceeded") +
-              "</td></tr>",
-          )
-          .join("");
-        const sp = $("spark");
-        $("cap").style.display = h.length < 2 ? "none" : "block";
-        if (h.length < 2) {
-          sp.style.display = "none";
-          return;
-        }
-        const pts = h
-          .slice()
-          .reverse()
-          .map((r, i, arr) => {
-            const u = Math.min(r.b > 0 ? (r.c / r.b) * 100 : 200, 200);
-            return (
-              ((i / (arr.length - 1)) * 196 + 2).toFixed(1) +
-              "," +
-              (38 - (u / 200) * 36).toFixed(1)
-            );
-          })
-          .join(" ");
-        sp.innerHTML =
-          '<line x1="0" x2="200" y1="20" y2="20" stroke="#64748b" stroke-dasharray="3 3" stroke-width="1" vector-effect="non-scaling-stroke"/><polyline points="' +
-          pts +
-          '" fill="none" stroke="#ff9900" stroke-width="2" vector-effect="non-scaling-stroke"/>';
-        sp.style.display = "block";
-      }
-      $("clr").onclick = () => {
-        try {
-          localStorage.removeItem(KEY);
-        } catch (e) {}
-        renderHistory();
-      };
+  let currentMode = "DEMO";
+  let busy = false;
+  let lastResult = null;
+  let lastAttemptFailed = false;
 
-      async function run() {
-        if (busy) return;
-        const budget = parseFloat($("budget").value),
-          demo = parseFloat($("demo").value);
-        if (!Number.isFinite(budget) || budget < 0 || budget > 10000)
-          return showErr("Enter a budget between 0 and 10,000.");
-        const body = { mode, budget };
-        if (mode === "DEMO") {
-          if (!Number.isFinite(demo) || demo < 0 || demo > 10000)
-            return showErr("Enter a demo cost between 0 and 10,000.");
-          body.demo_cost = demo;
-        }
-        busy = true;
-        hideErr();
-        $("run").disabled = true;
-        $("run").textContent = "Checking...";
-        let ok = false;
-        const ctl = new AbortController(),
-          timer = setTimeout(() => ctl.abort(), 25000);
-        try {
-          const r = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-            signal: ctl.signal,
-          });
-          let d = null;
-          try {
-            d = await r.json();
-          } catch (e) {}
-          if (r.ok && d && d.status) {
-            setApi("ok", "API connected");
-            render(d);
-            save(d);
-            ok = true;
-            shown = true;
-            lastMode = d.mode;
-          } else if (r.status === 400) {
-            setApi("ok", "API connected");
-            showErr((d && d.message) || "The API rejected those settings.");
-          } else if (r.status === 502) {
-            setApi("warn", "API reachable. AWS cost lookup failed");
-            showErr(
-              "AWS Cost Explorer did not return a cost. Try again in a moment.",
-            );
-          } else if (r.status === 429) {
-            setApi("warn", "API reachable. Rate limited");
-            showErr(
-              "Too many requests. Wait a second, then run the check again.",
-            );
-          } else {
-            setApi("warn", "API error " + r.status);
-            showErr(
-              "The API returned an unexpected response (" + r.status + ").",
-            );
-          }
-        } catch (e) {
-          setApi("bad", "API unreachable");
-          showErr(
-            e.name === "AbortError"
-              ? "The API took too long to respond."
-              : "Could not reach the API. Check your connection and the API URL.",
-          );
-        } finally {
-          clearTimeout(timer);
-          latestAttemptFailed = !ok;
-          updateStale();
-          setTimeout(() => {
-            busy = false;
-            $("run").disabled = false;
-            $("run").textContent = "Run check";
-          }, 600);
-        }
+  function connection(state, message) {
+    $("connection").className = "connection " + state;
+    $("connection").textContent = message;
+  }
+  function showError(message) {
+    $("error").textContent = message;
+    $("error").classList.add("visible");
+  }
+  function clearError() { $("error").classList.remove("visible"); }
+  function updateStale() {
+    if (!lastResult) return;
+    let message = "";
+    if (lastAttemptFailed) message = "Showing the previous result. The newest check did not complete.";
+    else if (currentMode !== lastResult.mode) message = "Showing a " + lastResult.mode + " result. Run a new check to refresh this view.";
+    $("resultVisual").classList.toggle("stale-visual", !!message);
+    $("staleNote").classList.toggle("visible", !!message);
+    $("staleNote").textContent = message;
+  }
+  function switchMode(mode) {
+    currentMode = mode;
+    $("demoMode").classList.toggle("selected", mode === "DEMO");
+    $("realMode").classList.toggle("selected", mode === "REAL");
+    $("demoMode").setAttribute("aria-pressed", String(mode === "DEMO"));
+    $("realMode").setAttribute("aria-pressed", String(mode === "REAL"));
+    $("demoFields").style.display = mode === "DEMO" ? "block" : "none";
+    $("realDetail").style.display = mode === "REAL" ? "block" : "none";
+    updateStale();
+  }
+  $("demoMode").addEventListener("click", () => switchMode("DEMO"));
+  $("realMode").addEventListener("click", () => switchMode("REAL"));
+
+  function sliderMax() {
+    return Math.min(10000, Math.max(2, Math.ceil((Number($("budgetInput").value) || .5) * 2)));
+  }
+  function syncDemo(value) {
+    const n = Math.min(10000, Math.max(0, Math.round(Number(value) * 100) / 100));
+    $("demoSlider").max = String(sliderMax());
+    $("demoInput").value = String(n);
+    $("demoSlider").value = String(n);
+  }
+  $("budgetInput").addEventListener("input", () => {
+    $("kpiBudget").textContent = Number.isFinite(Number($("budgetInput").value)) && $("budgetInput").value !== "" ? formatMoney($("budgetInput").value) : "—";
+    $("demoSlider").max = String(sliderMax());
+    $("overPreset").disabled = Number($("budgetInput").value) >= 10000;
+  });
+  $("demoInput").addEventListener("input", () => { $("demoSlider").value = $("demoInput").value; });
+  $("demoSlider").addEventListener("input", () => { $("demoInput").value = $("demoSlider").value; });
+  $("underPreset").addEventListener("click", () => syncDemo(Number($("budgetInput").value || 0) * .6));
+  $("overPreset").addEventListener("click", () => syncDemo(Number($("budgetInput").value || .5) * 1.5));
+
+  function serviceState(id, label, style="") {
+    const el = $(id);
+    el.className = "service-state " + style;
+    el.textContent = label;
+  }
+  function safeDate(dateString) {
+    const date = new Date(String(dateString) + "T00:00:00Z");
+    return Number.isNaN(date.getTime()) ? String(dateString) : date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  }
+  function renderResult(data) {
+    const over = data.status === "LIMIT_EXCEEDED";
+    const cost = Number(data.cost);
+    const budget = Number(data.budget);
+    const percent = budget > 0 ? (cost / budget) * 100 : cost > 0 ? Infinity : 0;
+    const pctDisplay = Number.isFinite(percent) ? Math.round(percent) + "%" : "∞";
+    const progress = Number.isFinite(percent) ? Math.max(0, Math.min(percent, 100)) / 100 : 1;
+    $("ringPct").textContent = pctDisplay;
+    $("ring").style.strokeDashoffset = String(CIRCUMFERENCE * (1 - progress));
+    $("ring").style.stroke = over ? "#d84b68" : "#138e81";
+    $("resultBadge").className = "status-label " + (over ? "bad" : "ok");
+    $("resultBadge").textContent = over ? "LIMIT EXCEEDED" : "WITHIN BUDGET";
+    $("resultTitle").textContent = over ? "Above your limit" : "Budget looks good";
+    $("resultSubtitle").textContent = formatMoney(cost) + " spent out of " + formatMoney(budget) + " allowed.";
+    $("resultNote").textContent = over ? "Spending is above the selected threshold." : "Spending is within the selected threshold.";
+    $("kpiCost").textContent = formatMoney(cost);
+    $("kpiBudget").textContent = formatMoney(budget);
+    $("kpiUsage").textContent = pctDisplay;
+    $("kpiSource").textContent = data.mode === "REAL" ? "Cost Explorer" : "Simulation";
+    $("sourceCaption").textContent = data.mode === "REAL" ? "Completed-day AWS data" : "User-supplied test cost";
+    const labels = [data.mode === "REAL" ? "REAL · AWS cost data" : "DEMO · simulated cost", "Checked " + formatTime(data.checked_at)];
+    if (data.mode === "REAL") labels.push("Cost date: " + safeDate(data.date), data.estimated ? "AWS estimate" : "AWS reported final");
+    else labels.push("Not actual AWS expenditure");
+    $("metadata").replaceChildren(...labels.map(text => { const item = document.createElement("span"); item.textContent = text; return item; }));
+
+    serviceState("lambdaState", "Executed", "ok");
+    const actions = data.actions || {};
+    serviceState("iotState", actions.iot === "published" ? "Published" : actions.iot === "failed" ? "Failed" : "Unknown", actions.iot === "published" ? "ok" : "bad");
+    serviceState("snsState", actions.sns === "sent" ? "Alert accepted" : actions.sns === "skipped" ? "Not needed" : actions.sns === "failed" ? "Failed" : "Unknown", actions.sns === "sent" ? "ok" : actions.sns === "skipped" ? "skip" : "bad");
+    serviceState("emailState", actions.sns === "sent" ? "Not tracked" : actions.sns === "failed" ? "Not confirmed" : "Not sent", actions.sns === "failed" ? "bad" : "skip");
+    lastResult = { mode: data.mode };
+    lastAttemptFailed = false;
+    updateStale();
+  }
+
+  function getHistory() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(HISTORY_KEY));
+      return Array.isArray(raw) ? raw.filter(r => r && Number.isFinite(Number(r.c)) && Number.isFinite(Number(r.b)) && ["SAFE", "LIMIT_EXCEEDED"].includes(r.s) && ["DEMO", "REAL"].includes(r.m)).slice(0,5) : [];
+    } catch (_) { return []; }
+  }
+  function saveHistory(data) {
+    const list = getHistory();
+    list.unshift({ t: data.checked_at, m: data.mode, c: data.cost, b: data.budget, s: data.status });
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0,5))); } catch (_) { /* Storage may be disabled. */ }
+    renderHistory();
+  }
+  function drawHistoryChart(records) {
+    const svg = $("historyChart");
+    const ns = "http://www.w3.org/2000/svg";
+    const point = (tag, attributes) => { const elem = document.createElementNS(ns, tag); Object.entries(attributes).forEach(([key,value]) => elem.setAttribute(key, String(value))); svg.append(elem); return elem; };
+    svg.replaceChildren();
+    const ordered = [...records].reverse();
+    const points = ordered.map((r,i) => {
+      const usage = r.b > 0 ? (r.c / r.b) * 100 : (r.c > 0 ? 200 : 0);
+      return [13 + i * (394 / Math.max(1, ordered.length - 1)), 76 - Math.min(200, Math.max(0,usage)) * .32];
+    });
+    const y100 = 76 - 100 * .32;
+    point("line", { x1: 0, x2: 420, y1: y100, y2: y100, stroke: "#cdd3e7", "stroke-dasharray": "5 5", "stroke-width": 1.5 });
+    const coords = points.map(([x,y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+    point("polygon", { points: `13,76 ${coords} ${points[points.length-1][0].toFixed(2)},76`, fill: "#e9e5ff", opacity: ".75" });
+    point("polyline", { points: coords, fill: "none", stroke: "#6554d8", "stroke-linejoin": "round", "stroke-linecap": "round", "stroke-width": 3 });
+    points.forEach(([x,y]) => point("circle", { cx: x, cy: y, r: 3.7, fill: "#6554d8", stroke: "white", "stroke-width": 1.8 }));
+  }
+  function renderHistory() {
+    const history = getHistory();
+    $("emptyHistory").hidden = history.length > 0;
+    $("historyTable").hidden = history.length === 0;
+    $("clearHistory").hidden = history.length === 0;
+    $("chartWrap").style.display = history.length > 1 ? "block" : "none";
+    const body = $("historyRows");
+    body.replaceChildren();
+    history.forEach(record => {
+      const row = document.createElement("tr");
+      const cols = [formatTime(record.t), record.m === "DEMO" ? "Simulation" : "Cost Explorer", formatMoney(record.c), formatMoney(record.b)];
+      cols.forEach(value => { const cell = document.createElement("td"); cell.textContent = value; row.append(cell); });
+      const statusCell = document.createElement("td");
+      const pill = document.createElement("span");
+      pill.className = "pill " + (record.s === "SAFE" ? "ok" : "bad");
+      pill.textContent = record.s === "SAFE" ? "Within limit" : "Exceeded";
+      statusCell.append(pill);
+      row.append(statusCell);
+      body.append(row);
+    });
+    if (history.length > 1) drawHistoryChart(history);
+  }
+  $("clearHistory").addEventListener("click", () => { try { localStorage.removeItem(HISTORY_KEY); } catch (_) {} renderHistory(); });
+
+  async function submitCheck(event) {
+    event.preventDefault();
+    if (busy) return;
+    const budgetRaw = $("budgetInput").value.trim();
+    const demoRaw = $("demoInput").value.trim();
+    const budget = Number(budgetRaw);
+    if (!budgetRaw || !Number.isFinite(budget) || budget < 0 || budget > 10000) return showError("Enter a valid budget between $0 and $10,000.");
+    const payload = { mode: currentMode, budget };
+    if (currentMode === "DEMO") {
+      const demo = Number(demoRaw);
+      if (!demoRaw || !Number.isFinite(demo) || demo < 0 || demo > 10000) return showError("Enter a simulated cost between $0 and $10,000.");
+      payload.demo_cost = demo;
+    }
+    busy = true;
+    clearError();
+    $("submitCheck").disabled = true;
+    $("submitText").textContent = "Running analysis…";
+    const aborter = new AbortController();
+    const timeoutId = setTimeout(() => aborter.abort(), 25000);
+    let succeeded = false;
+    try {
+      const response = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: aborter.signal });
+      let data = null;
+      try { data = await response.json(); } catch (_) { /* HTTP response may be non-JSON. */ }
+      if (response.ok && data && ["SAFE","LIMIT_EXCEEDED"].includes(data.status) && Number.isFinite(Number(data.cost)) && Number.isFinite(Number(data.budget))) {
+        connection("ok", "AWS API connected");
+        renderResult(data);
+        saveHistory(data);
+        succeeded = true;
+      } else if (response.status === 400) {
+        connection("ok", "AWS API connected");
+        showError(data && (data.message || data.error) || "AWS rejected those values. Check the input and try again.");
+      } else if (response.status === 502) {
+        connection("warn", "AWS lookup failed");
+        showError("AWS Cost Explorer or a downstream service couldn't complete the request.");
+      } else if (response.status === 429) {
+        connection("warn", "Rate limited");
+        showError("Too many requests. Try again shortly.");
+      } else {
+        connection("warn", "API returned " + response.status);
+        showError("The API returned an unexpected response (HTTP " + response.status + ").");
       }
-      $("run").onclick = run;
-      setMode("DEMO");
-      renderHistory();
-    </script>
-  </body>
+    } catch (error) {
+      connection("bad", "API unreachable");
+      showError(error.name === "AbortError" ? "The request timed out. Your previous result is retained." : "Could not reach the AWS API. Check the Learner Lab, endpoint and CORS configuration.");
+    } finally {
+      clearTimeout(timeoutId);
+      lastAttemptFailed = !succeeded;
+      updateStale();
+      busy = false;
+      $("submitCheck").disabled = false;
+      $("submitText").textContent = "Evaluate budget";
+    }
+  }
+  $("checkForm").addEventListener("submit", submitCheck);
+  switchMode("DEMO");
+  renderHistory();
+</script>
+</body>
 </html>
